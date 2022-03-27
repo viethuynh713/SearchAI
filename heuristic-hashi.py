@@ -32,6 +32,12 @@ class Grid:
                     row.append(Block(arg.grid[i][j]))
                 self.grid.append(row)
             self.stack = []
+            self.lineDraw = []
+            for i in range(0, len(arg.lineDraw)):
+                row = []
+                for x in arg.lineDraw[i]:
+                    row.append(x)
+                self.lineDraw.append(row)
             self.tempCase = None
             self.mark = []
             self.checkedList = []
@@ -42,9 +48,11 @@ class Grid:
             self.size = 0
             self.grid = []
             self.stack = [] # (grid, sum)
+            self.lineDraw = [] # list of list [x1, y1, x2, y2, n]
             # These attribute is used as temporary variable to calculate
             self.tempCase = None
             self.mark = []
+            self.markDraw = [] # mark lines to delete when cases are wrong
             self.checkedList = []
             self.generateList = []
             self.setGenerateList()
@@ -82,8 +90,11 @@ class Grid:
             else:
                 validList = self.genListValid(minWeight[0], minWeight[1])
                 self.mark.append(len(self.stack))
+                self.markDraw.append(len(self.lineDraw))
                 self.appendToStack(validList, minWeight[0], minWeight[1])
                 self.grid = self.stack[-1][0].grid
+                self.lineDraw = self.stack[-1][0].lineDraw
+            # draw
             step += 1
             # print("---Step " + str(step) + "---")
             # self.showResult()
@@ -190,6 +201,9 @@ class Grid:
             print(s1)
             print(s2)
             print(s3)
+        print("-----Connected order-----")
+        for x in self.lineDraw:
+            print(x)
 
     def calcBranchValue(self, i, j, direction):
         # Get information of adjacent node
@@ -294,6 +308,7 @@ class Grid:
         if (self.grid[i][j].isNode):
             if (isStart):
                 self.grid[i][j].bridgeDraw[direction - 2] += n
+                self.drawLine(iStart, jStart, i, j, n)
                 isStart = False
             else:
                 self.grid[i][j].bridgeDraw[direction] += n
@@ -310,6 +325,14 @@ class Grid:
                 self.drawBridge(i + 1, j, direction, n, isStart)
             else:
                 self.drawBridge(i, j - 1, direction, n, isStart)
+                
+    def drawLine(self, x1, y1, x2, y2, n):
+        # Write draw line code here
+        # (x1, y1) is the position of begin point
+        # (x2, y2) is the position of end point
+        # n is number of added lines, not number of connected lines
+        # We will add n lines between point (x1, y1) and (x2, y2)
+        self.lineDraw.append([x1, y1, x2, y2, n])
 
     def updateAdjacentNode(self, i, j):
         if (self.grid[i][j].restBridge == 0):
@@ -332,6 +355,7 @@ class Grid:
         nNode = 0
         iStart = -1
         jStart = -1
+        self.checkList = []
         for i in range(0, self.size):
             for j in range(0, self.size):
                 if (self.grid[i][j].bridge > 0):
@@ -382,11 +406,23 @@ class Grid:
 
     def selectOtherCase(self):
         self.stack.pop()
+        self.deleteLines(self.markDraw[-1])
         self.tempCase = self.stack[-1][0].grid
         if len(self.stack) == self.mark[-1] + 1:
             self.stack.pop()
             self.mark.pop()
+            self.markDraw.pop()
         self.grid = self.tempCase
+        
+    def deleteLines(self, start):
+        for i in range(start, len(self.lineDraw)):
+            # Write code to delete line here for each lineDraw[i]
+            # lineDraw[i] has type: [x1, y1, x2, y2, n], with:
+                # (x1, y1) is the position of begin point
+                # (x2, y2) is the position of end point
+                # n is number of added lines, not number of connected lines
+            # We will detele n lines between point (x1, y1) and (x2, y2)
+            pass
 
     def updateAdjacentBridge(self, i, j, direction):
         x = 0; y = 0
