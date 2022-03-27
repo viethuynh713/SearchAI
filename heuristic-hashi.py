@@ -104,6 +104,7 @@ class Grid:
                 res = self.checkIsolation()
                 if res:
                     self.selectOtherCase()
+                    minWeight = self.findMinWeight()
         print("The puzzle is solved after ", step, " steps!")
         self.showResult()
 
