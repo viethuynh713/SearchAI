@@ -103,6 +103,7 @@ class Grid:
             if (minWeight == 9 and len(self.stack) > 0):
                 res = self.checkIsolation()
                 if res:
+                    print("Some islands is isolated!!!")
                     self.selectOtherCase()
                     minWeight = self.findMinWeight()
         print("The puzzle is solved after ", step, " steps!")
