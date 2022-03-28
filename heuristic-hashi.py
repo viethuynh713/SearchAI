@@ -33,13 +33,11 @@ class Grid:
                 self.grid.append(row)
             self.stack = []
             self.lineDraw = []
-            for i in range(0, len(arg.lineDraw)):
-                row = []
-                for x in arg.lineDraw[i]:
-                    row.append(x)
-                self.lineDraw.append(row)
+            for x in arg.lineDraw:
+                self.lineDraw.append(x)
             self.tempCase = None
             self.mark = []
+            self.markDraw = []
             self.checkedList = []
             self.generateList = []
             self.setGenerateList()
@@ -48,7 +46,7 @@ class Grid:
             self.size = 0
             self.grid = []
             self.stack = [] # (grid, sum)
-            self.lineDraw = [] # list of list [x1, y1, x2, y2, n]
+            self.lineDraw = [] # list of tuple (x1, y1, x2, y2, n)
             # These attribute is used as temporary variable to calculate
             self.tempCase = None
             self.mark = []
@@ -74,7 +72,7 @@ class Grid:
         minWeight = self.findMinWeight() # [i, j, weight]
         # Step 5
         step = 0
-        # print("---Step 0---")
+        print("---Begin---")
         # self.showTable()
         while (minWeight[2] < 9):
             # Step 6
@@ -88,6 +86,7 @@ class Grid:
                 self.solveNode(minWeight[0], minWeight[1], 1)
             # Step 9
             else:
+                print("THERE ARE MORE THAN ONE CASE HERE!!!")
                 validList = self.genListValid(minWeight[0], minWeight[1])
                 self.mark.append(len(self.stack))
                 self.markDraw.append(len(self.lineDraw))
@@ -96,14 +95,14 @@ class Grid:
                 self.lineDraw = self.stack[-1][0].lineDraw
             # draw
             step += 1
-            # print("---Step " + str(step) + "---")
-            # self.showResult()
+            print("---Step " + str(step) + "---")
+            self.showResult()
             # self.showTable()
             minWeight = self.findMinWeight()
-            if (minWeight == 9 and len(self.stack) > 0):
+            if (minWeight[2] == 9 and len(self.stack) > 0):
                 res = self.checkIsolation()
                 if res:
-                    print("Some islands is isolated!!!")
+                    print("THIS CASE IS FALSE!!!")
                     self.selectOtherCase()
                     minWeight = self.findMinWeight()
         print("The puzzle is solved after ", step, " steps!")
@@ -302,11 +301,11 @@ class Grid:
 
     def connectBridge(self, i, j, direction, n):
         if (n > 0):
-            self.drawBridge(i, j, direction, n, False)
+            self.drawBridge(i, j, i, j, direction, n, False)
             self.grid[i][j].branchValue[direction] -= n
             self.grid[i][j].restBridge -= n
     
-    def drawBridge(self, i, j, direction, n, isStart):
+    def drawBridge(self, iStart, jStart, i, j, direction, n, isStart):
         if (self.grid[i][j].isNode):
             if (isStart):
                 self.grid[i][j].bridgeDraw[direction - 2] += n
@@ -320,21 +319,21 @@ class Grid:
             self.grid[i][j].bridgeDraw[direction - 2] += n
         if (isStart):
             if (direction == 0):
-                self.drawBridge(i - 1, j, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i - 1, j, direction, n, isStart)
             elif (direction == 1):
-                self.drawBridge(i, j + 1, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i, j + 1, direction, n, isStart)
             elif (direction == 2):
-                self.drawBridge(i + 1, j, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i + 1, j, direction, n, isStart)
             else:
-                self.drawBridge(i, j - 1, direction, n, isStart)
-                
+                self.drawBridge(iStart, jStart, i, j - 1, direction, n, isStart)
+
     def drawLine(self, x1, y1, x2, y2, n):
         # Write draw line code here
         # (x1, y1) is the position of begin point
         # (x2, y2) is the position of end point
         # n is number of added lines, not number of connected lines
         # We will add n lines between point (x1, y1) and (x2, y2)
-        self.lineDraw.append([x1, y1, x2, y2, n])
+        self.lineDraw.append((x1, y1, x2, y2, n))
 
     def updateAdjacentNode(self, i, j):
         if (self.grid[i][j].restBridge == 0):
@@ -357,7 +356,7 @@ class Grid:
         nNode = 0
         iStart = -1
         jStart = -1
-        self.checkList = []
+        self.checkedList = []
         for i in range(0, self.size):
             for j in range(0, self.size):
                 if (self.grid[i][j].bridge > 0):
@@ -386,13 +385,13 @@ class Grid:
         if (self.grid[i][j].bridgeDraw[2] > 0):
             x = i + 1
             y = j
-            while (not self.grid[i][j].isNode):
+            while (not self.grid[x][y].isNode):
                 x += 1
             self.checkingList(x, y)
         if (self.grid[i][j].bridgeDraw[3] > 0):
             x = i
             y = j - 1
-            while (not self.grid[i][j].isNode):
+            while (not self.grid[x][y].isNode):
                 y -= 1
             self.checkingList(x, y)
     
@@ -409,17 +408,18 @@ class Grid:
     def selectOtherCase(self):
         self.stack.pop()
         self.deleteLines(self.markDraw[-1])
-        self.tempCase = self.stack[-1][0].grid
+        self.tempCase = self.stack[-1][0]
         if len(self.stack) == self.mark[-1] + 1:
             self.stack.pop()
             self.mark.pop()
             self.markDraw.pop()
-        self.grid = self.tempCase
-        
+        self.grid = self.tempCase.grid
+        self.lineDraw = self.tempCase.lineDraw
+
     def deleteLines(self, start):
         for i in range(start, len(self.lineDraw)):
             # Write code to delete line here for each lineDraw[i]
-            # lineDraw[i] has type: [x1, y1, x2, y2, n], with:
+            # lineDraw[i] has type: (x1, y1, x2, y2, n), with:
                 # (x1, y1) is the position of begin point
                 # (x2, y2) is the position of end point
                 # n is number of added lines, not number of connected lines
