@@ -35,6 +35,9 @@ class Grid:
             self.lineDraw = []
             for x in arg.lineDraw:
                 self.lineDraw.append(x)
+            self.drawOrder = []
+            for x in arg.drawOrder:
+                self.drawOrder.append(x)
             self.tempCase = None
             self.mark = []
             self.markDraw = []
@@ -47,6 +50,7 @@ class Grid:
             self.grid = []
             self.stack = [] # (grid, sum)
             self.lineDraw = [] # list of tuple (x1, y1, x2, y2, n)
+            self.drawOrder = [] # order to draw (include draw and delete line)
             # These attribute is used as temporary variable to calculate
             self.tempCase = None
             self.mark = []
@@ -93,6 +97,7 @@ class Grid:
                 self.appendToStack(validList, minWeight[0], minWeight[1])
                 self.grid = self.stack[-1][0].grid
                 self.lineDraw = self.stack[-1][0].lineDraw
+                self.drawOrder.append(self.stack[-1][0].drawOrder[-1])
             # draw
             step += 1
             print("---Step " + str(step) + "---")
@@ -203,6 +208,9 @@ class Grid:
             print(s2)
             print(s3)
         print("-----Connected order-----")
+        for x in self.drawOrder:
+            print(x)
+        print("-----Clearly connected order-----")
         for x in self.lineDraw:
             print(x)
 
@@ -328,11 +336,7 @@ class Grid:
                 self.drawBridge(iStart, jStart, i, j - 1, direction, n, isStart)
 
     def drawLine(self, x1, y1, x2, y2, n):
-        # Write draw line code here
-        # (x1, y1) is the position of begin point
-        # (x2, y2) is the position of end point
-        # n is number of added lines, not number of connected lines
-        # We will add n lines between point (x1, y1) and (x2, y2)
+        self.drawOrder.append((x1, y1, x2, y2, n, True))
         self.lineDraw.append((x1, y1, x2, y2, n))
 
     def updateAdjacentNode(self, i, j):
@@ -418,13 +422,12 @@ class Grid:
 
     def deleteLines(self, start):
         for i in range(start, len(self.lineDraw)):
-            # Write code to delete line here for each lineDraw[i]
-            # lineDraw[i] has type: (x1, y1, x2, y2, n), with:
-                # (x1, y1) is the position of begin point
-                # (x2, y2) is the position of end point
-                # n is number of added lines, not number of connected lines
-            # We will detele n lines between point (x1, y1) and (x2, y2)
-            pass
+            x1 = self.lineDraw[i][0]
+            y1 = self.lineDraw[i][1]
+            x2 = self.lineDraw[i][2]
+            y2 = self.lineDraw[i][3]
+            n = self.lineDraw[i][4]
+            self.drawOrder.append((x1, y1, x2, y2, n, False))
 
     def updateAdjacentBridge(self, i, j, direction):
         x = 0; y = 0
@@ -500,6 +503,6 @@ class Grid:
 
 # main
 data = open("input_hashi.txt", "r")
-g = Grid(data)
-g.play()
+grid = Grid(data)
+grid.play()
 data.close()

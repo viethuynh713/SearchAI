@@ -20,6 +20,9 @@ class Grid:
             self.colorList = []
             for x in arg.colorList:
                 self.colorList.append(x)
+            self.colorOrder = []
+            for x in arg.colorOrder:
+                self.colorOrder.append(x)
             self.stack = []
             self.checkedList = []
             self.tempCase = None
@@ -29,6 +32,7 @@ class Grid:
             self.size = 0
             self.grid = []
             self.colorList = []
+            self.colorOrder = []
             # These attribute is used as temporary variable
             self.stack = [] # grid
             self.checkedList = []
@@ -99,6 +103,9 @@ class Grid:
                 s += res + "\t"
             print(s)
         print("-----Colored order-----")
+        for x in self.colorOrder:
+            print(x)
+        print("-----Clearly colored order-----")
         for x in self.colorList:
             print(x)
 
@@ -170,8 +177,7 @@ class Grid:
             self.setTrueBlock(i, j - 1)
 
     def colorFalseBlock(self, i, j):
-        # Color the False Block at (i, j) by black
-        # We will color block[i][j] by black
+        self.colorOrder.append((i, j, True))
         self.colorList.append((i, j))
 
     def setTrueBlock(self, i, j):
@@ -239,12 +245,12 @@ class Grid:
 
     def undoColorFalseBlock(self, start):
         for i in range(start, len(self.colorList)):
-            # Color each block at (self.colorList[i][0], self.colorList[i][1]) by white
-            # We will color each block[self.colorList[i][0]][self.colorList[i][1]] by white
-            pass
+            x = self.colorList[i][0]
+            y = self.colorList[i][1]
+            self.colorOrder.append((x, y, False))
             
 # main
 data = open("input_hitori.txt", "r")
-g = Grid(data)
-g.play()
+grid = Grid(data)
+grid.play()
 data.close()
