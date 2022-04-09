@@ -1,3 +1,5 @@
+import time
+
 class Block:
     def __init__(self, *arg): # (n, i, j) or (Block)
         if (len(arg) == 3):
@@ -32,8 +34,15 @@ class Grid:
                     row.append(Block(arg.grid[i][j]))
                 self.grid.append(row)
             self.stack = []
+            self.lineDraw = []
+            for x in arg.lineDraw:
+                self.lineDraw.append(x)
+            self.drawOrder = []
+            for x in arg.drawOrder:
+                self.drawOrder.append(x)
             self.tempCase = None
             self.mark = []
+            self.markDraw = []
             self.checkedList = []
             self.generateList = []
             self.setGenerateList()
@@ -42,9 +51,12 @@ class Grid:
             self.size = 0
             self.grid = []
             self.stack = [] # (grid, sum)
+            self.lineDraw = [] # list of tuple (x1, y1, x2, y2, n)
+            self.drawOrder = [] # order to draw (include draw and delete line)
             # These attribute is used as temporary variable to calculate
             self.tempCase = None
             self.mark = []
+            self.markDraw = [] # mark lines to delete when cases are wrong
             self.checkedList = []
             self.generateList = []
             self.setGenerateList()
@@ -66,7 +78,7 @@ class Grid:
         minWeight = self.findMinWeight() # [i, j, weight]
         # Step 5
         step = 0
-        # print("---Step 0---")
+        # print("---Begin---")
         # self.showTable()
         while (minWeight[2] < 9):
             # Step 6
@@ -80,19 +92,26 @@ class Grid:
                 self.solveNode(minWeight[0], minWeight[1], 1)
             # Step 9
             else:
+                # print("THERE ARE MORE THAN ONE CASE HERE!!!")
                 validList = self.genListValid(minWeight[0], minWeight[1])
                 self.mark.append(len(self.stack))
+                self.markDraw.append(len(self.lineDraw))
                 self.appendToStack(validList, minWeight[0], minWeight[1])
                 self.grid = self.stack[-1][0].grid
+                self.lineDraw = self.stack[-1][0].lineDraw
+                self.drawOrder.append(self.stack[-1][0].drawOrder[-1])
+            # draw
             step += 1
-            print("---Step " + str(step) + "---")
-            self.showResult()
+            # print("---Step " + str(step) + "---")
+            # self.showResult()
             # self.showTable()
             minWeight = self.findMinWeight()
-            if (minWeight == 9 and len(self.stack) > 0):
+            if (minWeight[2] == 9 and len(self.stack) > 0):
                 res = self.checkIsolation()
                 if res:
+                    print("THIS CASE IS FALSE!!!")
                     self.selectOtherCase()
+                    minWeight = self.findMinWeight()
         print("The puzzle is solved after ", step, " steps!")
         self.showResult()
 
@@ -190,6 +209,12 @@ class Grid:
             print(s1)
             print(s2)
             print(s3)
+        # print("-----Connected order-----")
+        # for x in self.drawOrder:
+        #     print(x)
+        # print("-----Clearly connected order-----")
+        # for x in self.lineDraw:
+        #     print(x)
 
     def calcBranchValue(self, i, j, direction):
         # Get information of adjacent node
@@ -257,7 +282,7 @@ class Grid:
                 branchTemp = self.grid[i][j].branchValue[k]
                 if (branchTemp > 0):
                     self.connectBridge(i, j, k, branchTemp)
-                    self.updateAdjacentBridge(i, j, k)
+                    self.updateAdjacentBridge(i, j, k, branchTemp)
                     adjacentNode = self.findAdjacentNode(i, j, k)
                     adjacentNode.restBridge -= branchTemp
                     adjacentNode.branchValue[k - 2] -= branchTemp
@@ -266,7 +291,7 @@ class Grid:
             for k in range(0, 4):
                 if (self.grid[i][j].branchValue[k] == 2):
                     self.connectBridge(i, j, k, 1)
-                    self.updateAdjacentBridge(i, j, k)
+                    self.updateAdjacentBridge(i, j, k, 1)
                     adjacentNode = self.findAdjacentNode(i, j, k)
                     adjacentNode.restBridge -= 1
                     adjacentNode.branchValue[k - 2] -= 1
@@ -277,7 +302,7 @@ class Grid:
                 if (branchTemp > 0):
                     self.connectBridge(i, j, k, valid[k])
                     self.grid[i][j].branchValue[k] = 0
-                    self.updateAdjacentBridge(i, j, k)
+                    self.updateAdjacentBridge(i, j, k, valid[k])
                     adjacentNode = self.findAdjacentNode(i, j, k)
                     adjacentNode.restBridge -= valid[k]
                     adjacentNode.branchValue[k - 2] = 0
@@ -286,14 +311,15 @@ class Grid:
 
     def connectBridge(self, i, j, direction, n):
         if (n > 0):
-            self.drawBridge(i, j, direction, n, False)
+            self.drawBridge(i, j, i, j, direction, n, False)
             self.grid[i][j].branchValue[direction] -= n
             self.grid[i][j].restBridge -= n
     
-    def drawBridge(self, i, j, direction, n, isStart):
+    def drawBridge(self, iStart, jStart, i, j, direction, n, isStart):
         if (self.grid[i][j].isNode):
             if (isStart):
                 self.grid[i][j].bridgeDraw[direction - 2] += n
+                self.drawLine(iStart, jStart, i, j, n)
                 isStart = False
             else:
                 self.grid[i][j].bridgeDraw[direction] += n
@@ -303,13 +329,17 @@ class Grid:
             self.grid[i][j].bridgeDraw[direction - 2] += n
         if (isStart):
             if (direction == 0):
-                self.drawBridge(i - 1, j, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i - 1, j, direction, n, isStart)
             elif (direction == 1):
-                self.drawBridge(i, j + 1, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i, j + 1, direction, n, isStart)
             elif (direction == 2):
-                self.drawBridge(i + 1, j, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i + 1, j, direction, n, isStart)
             else:
-                self.drawBridge(i, j - 1, direction, n, isStart)
+                self.drawBridge(iStart, jStart, i, j - 1, direction, n, isStart)
+
+    def drawLine(self, x1, y1, x2, y2, n):
+        self.drawOrder.append((x1, y1, x2, y2, n, True))
+        self.lineDraw.append((x1, y1, x2, y2, n))
 
     def updateAdjacentNode(self, i, j):
         if (self.grid[i][j].restBridge == 0):
@@ -332,6 +362,7 @@ class Grid:
         nNode = 0
         iStart = -1
         jStart = -1
+        self.checkedList = []
         for i in range(0, self.size):
             for j in range(0, self.size):
                 if (self.grid[i][j].bridge > 0):
@@ -360,13 +391,13 @@ class Grid:
         if (self.grid[i][j].bridgeDraw[2] > 0):
             x = i + 1
             y = j
-            while (not self.grid[i][j].isNode):
+            while (not self.grid[x][y].isNode):
                 x += 1
             self.checkingList(x, y)
         if (self.grid[i][j].bridgeDraw[3] > 0):
             x = i
             y = j - 1
-            while (not self.grid[i][j].isNode):
+            while (not self.grid[x][y].isNode):
                 y -= 1
             self.checkingList(x, y)
     
@@ -382,42 +413,55 @@ class Grid:
 
     def selectOtherCase(self):
         self.stack.pop()
-        self.tempCase = self.stack[-1][0].grid
+        self.deleteLines(self.markDraw[-1])
+        self.tempCase = self.stack[-1][0]
         if len(self.stack) == self.mark[-1] + 1:
             self.stack.pop()
             self.mark.pop()
-        self.grid = self.tempCase
+            self.markDraw.pop()
+        self.grid = self.tempCase.grid
+        self.lineDraw = self.tempCase.lineDraw
 
-    def updateAdjacentBridge(self, i, j, direction):
-        x = 0; y = 0
-        if direction == 0:
-            i -= 1
-            x = 1; y = 3
-        elif direction == 1:
-            j += 1
-            x = 0; y = 2
-        elif direction == 2:
-            i += 1
-            x = 1; y = 3
-        else:
-            j -= 1
-            x = 0; y = 2
-        while not self.grid[i][j].isNode:
-            adjacentNode1 = self.findAdjacentNode(i, j, x)
-            adjacentNode2 = self.findAdjacentNode(i, j, y)
-            if adjacentNode1 != None and adjacentNode2 != None:
-                adjacentNode1.branchValue[y] = 0
-                self.calcWeight(adjacentNode1.i, adjacentNode1.j)
-                adjacentNode2.branchValue[x] = 0
-                self.calcWeight(adjacentNode2.i, adjacentNode2.j)
+    def deleteLines(self, start):
+        for i in range(start, len(self.lineDraw)):
+            x1 = self.lineDraw[i][0]
+            y1 = self.lineDraw[i][1]
+            x2 = self.lineDraw[i][2]
+            y2 = self.lineDraw[i][3]
+            n = self.lineDraw[i][4]
+            self.drawOrder.append((x1, y1, x2, y2, n, False))
+
+    def updateAdjacentBridge(self, i, j, direction, n):
+        if (n > 0):
+            x = 0; y = 0
             if direction == 0:
                 i -= 1
+                x = 1; y = 3
             elif direction == 1:
                 j += 1
+                x = 0; y = 2
             elif direction == 2:
                 i += 1
+                x = 1; y = 3
             else:
                 j -= 1
+                x = 0; y = 2
+            while not self.grid[i][j].isNode:
+                adjacentNode1 = self.findAdjacentNode(i, j, x)
+                adjacentNode2 = self.findAdjacentNode(i, j, y)
+                if adjacentNode1 != None and adjacentNode2 != None:
+                    adjacentNode1.branchValue[y] = 0
+                    self.calcWeight(adjacentNode1.i, adjacentNode1.j)
+                    adjacentNode2.branchValue[x] = 0
+                    self.calcWeight(adjacentNode2.i, adjacentNode2.j)
+                if direction == 0:
+                    i -= 1
+                elif direction == 1:
+                    j += 1
+                elif direction == 2:
+                    i += 1
+                else:
+                    j -= 1
 
     def genListValid(self, i, j):
         ans = []
@@ -460,9 +504,10 @@ class Grid:
             idx -= 1
         return arr
 
-
 # main
-data = open("input_hashi.txt", "r")
-g = Grid(data)
-g.play()
+start_time = time.time()
+data = open("large_input_hashi.txt", "r")
+grid = Grid(data)
+grid.play()
 data.close()
+print("--- Running time: %s seconds ---" % (time.time() - start_time))
