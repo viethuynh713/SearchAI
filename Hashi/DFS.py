@@ -1,7 +1,9 @@
 
 
+import re
 from typing import List
 from venv import main
+from xml.dom.minidom import Element
 from Data import data
 
 
@@ -15,233 +17,129 @@ class Node:
         return self.x == other.x and self.y == other.y# and self.value == other.value
     
     def GetNeighbor(self,tempdata):
-        self.neighbors = []
+        self.neighbors = [] # type: List[Node] [Phải, trái , trên , dưới] 
+        # tìm node phía phải
         for i in range(self.y + 1,len(tempdata)):
             newNode = Node(self.x,i,tempdata[self.x][i])
             if newNode.value > 0  : 
                 self.neighbors.append(newNode)
                 break
+        if len(self.neighbors) == 0:
+            self.neighbors.append(0)
+        # tìm node phía trái   
         for i in range(self.y - 1,-1,-1):
             newNode = Node(self.x,i,tempdata[self.x][i])
             if newNode.value > 0 : 
                 self.neighbors.append(newNode)
                 break
-        for i in range(self.x +1,len(tempdata)):
-            newNode = Node(i,self.y,tempdata[i][self.y])
-            if newNode.value > 0 :
-                self.neighbors.append(newNode)
-                break
+        if len(self.neighbors) == 1:
+            self.neighbors.append(0)
+        # tìm node phía trên
         for i in range(self.x-1,-1,-1):
             newNode = Node(i,self.y,tempdata[i][self.y])
             if newNode.value > 0:
                 self.neighbors.append(newNode)
                 break
+        if len(self.neighbors) == 2:
+            self.neighbors.append(0)
+        # tìm node phía dưới
+        for i in range(self.x +1,len(tempdata)):
+            newNode = Node(i,self.y,tempdata[i][self.y])
+            if newNode.value > 0 :
+                self.neighbors.append(newNode)
+                break
+        if len(self.neighbors) == 3:
+            self.neighbors.append(0)
+        
         
 
 class Hashi():
     def __init__(self,d):
         self.hashiData = NewList(d)
+        self.mark = []
         self.path =[]
-        self.queue = []
+        self.stack = []
         self.updateData = False
         self.GetRoot(self.hashiData)
-    # def GetTotalLine(self,d):
-    #     self.totalLine = 0
-    #     for row in d:
-    #         for item in row:
-    #             if item != 0:
-    #                 self.totalLine += item
+
     def GetRoot(self,d):
         for i in range(len(d)):
             for j in range(len(d[i])):
                 if data[j][i] != 0:
-                    self.queue.append(Node(j,i,d[i][j]))
+                    self.stack.append([Node(j,i,d[i][j]),0])
                     return                 
         
-    def DFS(self,path,totalLine,tempdata):
-        print("z")
-        if self.queue == []:
+    def DFS(self,path,tempdata):
+        # print(self.stack)
+        if self.stack == []:
             return
-        node = self.queue.pop()
+        ele = self.stack.pop()
+        node = ele[0]
+        if node.value == 0:
+            return
+        
         tempdata[node.x][node.y] -= node.value
 
         if TerminalDFS(self.hashiData) == 0:
+            print("success")
             print(path) 
             return
-        # totalLine -= node.value 
+        
         node.GetNeighbor(tempdata)
-
-        if len(node.neighbors) == 1:
-
-            path.append([(node.x,node.y),(node.neighbors[0].x,node.neighbors[0].y),node.value])    
+        checkNeighbor = 0
+        for i in node.neighbors:
+            if type(i) == Node:
+                checkNeighbor += 1
+        if checkNeighbor == 0:
+            return
+        arrayDivide = DivideValue(node.value,4)
+        
+        for i in arrayDivide:
+            checkValue = True
+            # Kiểm tra cặp số có phù hợp không
+            for j in range(4):
+                if i[j] != 0 and type(node.neighbors[j]) != Node:
+                    checkValue = False
+                    break
+            if checkValue == False:
+                continue
             
-            newNode1 = Node(node.neighbors[0].x,node.neighbors[0].y,node.neighbors[0].value - node.value)
-    
-            tempdata[newNode1.x][newNode1.y] = newNode1.value
-            
-            if newNode1.value != 0:
-                self.queue.append(newNode1)
-                self.DFS(path,totalLine,tempdata)
-            if newNode1.value == 0:
-                self.updateData = True
-                self.path += path
-                self.hashiData = NewList(tempdata)
-                return
-            
-                                
-        if len(node.neighbors) == 2:
-            
-            arrayDivide = DivideValue(node.value,2)
-            
-            for i in arrayDivide:
-            
-                if node.neighbors[0].value - i[0] < 0 or node.neighbors[1].value - i[1] < 0:
-                    continue
-                resPath = []
-                resPath.append([(node.x,node.y),(node.neighbors[0].x,node.neighbors[0].y),i[0]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[1]])
-                
-                newNode1 = Node(node.neighbors[0].x,node.neighbors[0].y,node.neighbors[0].value - i[0])
-                newNode2 = Node(node.neighbors[1].x,node.neighbors[1].y,node.neighbors[1].value - i[1])
-                
-                dataRecur = NewList(tempdata)
-                dataRecur[newNode1.x][newNode1.y] -= i[0]
-                dataRecur[newNode2.x][newNode2.y] -= i[1]
-                temp = 0
-                if newNode1.value != 0: 
-                    if newNode1 not in self.queue:
-                        self.queue.append(newNode1)
-                        temp += 1
-                    else:
-                        for no in self.queue:
-                            if no == newNode1:
-                                no.value -= i[0]
-                                
-                    temp+=1
-                if newNode2.value != 0 and newNode2 not in self.queue:
-                    if newNode2 not in self.queue:
-                        self.queue.append(newNode2)
-                        temp+=1
-                    else:
-                        for no in self.queue:
-                            if no == newNode2:
-                                no.value -= i[1]
-
-                for j in range(temp):
-                    if self.updateData == True:
-                        dataRecur = NewList(self.hashiData)
-                        self.updateData = False
-                    self.DFS(path+resPath,totalLine,dataRecur)
-                if newNode1.value == 0 and newNode2.value == 0:
-                    tempdata[newNode1.x][newNode1.y] -= newNode1.value
-                    tempdata[newNode2.x][newNode2.y] -= newNode2.value
-                    self.updateData = True
-                    self.path = path + resPath
-                    self.hashiData = NewList(tempdata)
+            resPath = []
+            dataRecursive = NewList(tempdata)
+            lenOfStack = len(self.stack)
+            self.mark.append(lenOfStack)
+            for nei in range(4):
+                if type(node.neighbors[nei]) == Node:
+                    if node.neighbors[nei].value - i[nei] < 0:
+                        checkValue = False
+                        break
                     
-                
-                # if i == arrayDivide[len(arrayDivide)-1]:
-                #     break
-
-                # dataRecur[newNode1.x][newNode1.y] += newNode1.value
-                # dataRecur[newNode2.x][newNode2.y] += newNode2.value
-              
-        if len(node.neighbors) == 3:
-            # print("3")
-            arrayDivide = DivideValue(node.value,3)
-            for i in arrayDivide:
-                if node.neighbors[0].value - i[0] < 0 or node.neighbors[1].value - i[1] < 0 or node.neighbors[2].value - i[2] < 0:
-                    continue
-                resPath = []
-                resPath.append([(node.x,node.y),(node.neighbors[0].x,node.neighbors[0].y),i[0]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[1]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[2]])
-                
-                newNode1 = Node(node.neighbors[0].x,node.neighbors[0].y,node.neighbors[0].value - i[0])
-                newNode2 = Node(node.neighbors[1].x,node.neighbors[1].y,node.neighbors[1].value - i[1])
-                newNode3 = Node(node.neighbors[2].x,node.neighbors[2].y,node.neighbors[2].value - i[2])
-                
-                dataRecur = NewList(tempdata)
-                dataRecur[newNode1.x][newNode1.y] -= i[0]
-                dataRecur[newNode2.x][newNode2.y] -= i[1]
-                dataRecur[newNode3.x][newNode3.y] -= i[2]
-
-                temp = 0
-                if newNode1.value != 0 and newNode1 not in self.queue:
-                    self.queue.append(newNode1)
-                    temp+=1
-                elif newNode2.value != 0 and newNode2 not in self.queue:
-                    self.queue.append(newNode2)
-                    temp+=1
-                elif newNode3.value != 0 and newNode3 not in self.queue:
-                    self.queue.append(newNode3)
-                    temp+=1
-                for j in range(temp):
-                    if self.updateData == True:
-                        dataRecur = NewList(self.hashiData)
-                        self.updateData = False
-                    self.DFS(path+resPath,totalLine,dataRecur)
-                if newNode1.value == 0 and newNode2.value == 0 and newNode3.value == 0:
-                    self.updateData = True
-                    self.path = path + resPath
-                    self.hashiData = NewList(tempdata)
-                # if i == arrayDivide[len(arrayDivide)-1]:
-                #     break
-                
-                # dataRecur[newNode1.x][newNode1.y] += newNode1.value
-                # dataRecur[newNode2.x][newNode2.y] += newNode2.value
-                # dataRecur[newNode3.x][newNode3.y] += newNode3.value
-                
-        if len(node.neighbors) == 4:
-            arrayDivide = DivideValue(node.value,4)
-            for i in arrayDivide:
-                if node.neighbors[0].value - i[0] < 0 or node.neighbors[1].value - i[1] < 0 or node.neighbors[2].value - i[2] < 0 or node.neighbors[3].value - i[3] < 0:
-                    continue
-                resPath = []
-                resPath.append([(node.x,node.y),(node.neighbors[0].x,node.neighbors[0].y),i[0]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[1]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[2]])
-                resPath.append([(node.x,node.y),(node.neighbors[1].x,node.neighbors[1].y),i[3]])
-                
-                newNode1 = Node(node.neighbors[0].x,node.neighbors[0].y,node.neighbors[0].value - i[0])
-                newNode2 = Node(node.neighbors[1].x,node.neighbors[1].y,node.neighbors[1].value - i[1])
-                newNode3 = Node(node.neighbors[2].x,node.neighbors[2].y,node.neighbors[2].value - i[2])
-                newNode4 = Node(node.neighbors[3].x,node.neighbors[3].y,node.neighbors[3].value - i[3])
-                
-                dataRecur = NewList(tempdata)
-                dataRecur[newNode1.x][newNode1.y] -= i[0]
-                dataRecur[newNode2.x][newNode2.y] -= i[1]
-                dataRecur[newNode3.x][newNode3.y] -= i[2]
-                dataRecur[newNode4.x][newNode4.y] -= i[3]
-                temp = 0     
-                if newNode1.value != 0 and newNode1 not in self.queue:
-                    self.queue.append(newNode1)
-                    temp+=1
-                if newNode2.value != 0 and newNode2 not in self.queue:
-                    self.queue.append(newNode2)
-                    temp+=1
-                if newNode3.value != 0 and newNode3 not in self.queue:
-                    self.queue.append(newNode3)
-                    temp+=1
-                if newNode4.value != 0 and newNode4 not in self.queue:
-                    self.queue.append(newNode4)
-                    temp+=1
-                for i in range(temp):
-                    if self.updateData == True:
-                        dataRecur = NewList(self.hashiData)
-                        self.updateData = False
-                    self.DFS(path+resPath,totalLine,dataRecur)
-                if i == arrayDivide[len(arrayDivide)-1]:
-                    break            
-                dataRecur[newNode1.x][newNode1.y] += newNode1.value
-                dataRecur[newNode2.x][newNode2.y] += newNode2.value
-                dataRecur[newNode3.x][newNode3.y] += newNode3.value
-                dataRecur[newNode4.x][newNode4.y] += newNode4.value
-                if newNode1.value == 0 and newNode2.value == 0 and newNode3.value == 0 and newNode4.value == 0:
-                    self.updateData = True
-                    self.path = path + resPath
-                    self.hashiData = NewList(tempdata)
-            
+                    node.neighbors[nei].value -= i[nei]
+                    self.stack.append([node.neighbors[nei], lenOfStack])
+                    dataRecursive[node.neighbors[nei].x][node.neighbors[nei].y] -= i[nei]
+                    resPath.append([(node.x,node.y),(node.neighbors[nei].x,node.neighbors[nei].y),i[nei]])
+            goodCase = True
+            for neighb in node.neighbors:
+                if type(neighb) == Node and neighb.value != 0 and checkValue == True:
+                    goodCase = False
+                    break
+            if goodCase:
+                print("goodCase")
+                self.hashiData = dataRecursive  
+                self.path = path + resPath  
+                # for i in self.stack:
+                #     if i[1] < lenOfStack:
+                #         self.stack.remove(i)       
+            for i in range(4):
+                if(type(node.neighbors[i]) == Node) and checkValue == True:
+                    self.DFS(path + resPath,dataRecursive)
+                    # for node in self.stack:
+                    #     if node[1] > lenOfStack:
+                    #         self.stack.remove(node)     
+        # for node in self.stack:
+        #     if ele[1] == node[1]:
+        #         self.stack.remove(node)  
+                               
 
 def NewList(olddata):
     newData = []
@@ -278,6 +176,6 @@ def DivideValue(value,NumNeighbor):
     return result
 if __name__ == "__main__":
     ha = Hashi(data)
-    Hashi.DFS(ha,ha.path,0,ha.hashiData)
+    Hashi.DFS(ha,ha.path,ha.hashiData)
 
     

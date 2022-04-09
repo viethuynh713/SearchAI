@@ -271,19 +271,20 @@ g = Grid(d)
 g.play()
 d.close()
 # print(drawGird)
-while not done:
-
-    screen.fill((255, 255, 255))
-    for i in range(0,500,100):
-        pygame.draw.line(screen, (0, 0, 0), (i, 0), (i, 700), 2)
-        pygame.draw.line(screen, (0, 0, 0), (0, i), (700, i), 2)
+clock = pygame.time.Clock()
+screen.fill((255, 255, 255))
+for i in range(0,500,100):
+    pygame.draw.line(screen, (0, 0, 0), (i, 0), (i, 700), 2)
+    pygame.draw.line(screen, (0, 0, 0), (0, i), (700, i), 2)
         
-        
-    for i in range(0,5):
-        for j in range(0,5):
-            screen.blit(myfont.render(str(data[j][i]), True, (255, 0, 0)), (i*100+50-10, j*100+50-15))  
+      
+for i in range(0,5):
+    for j in range(0,5):
+        screen.blit(myfont.render(str(data[j][i]), True, (255, 0, 0)), (i*100+50-10, j*100+50-15))  
     
     pygame.display.update()
+while not done:
+    clock.tick(10)
     step = 0
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
